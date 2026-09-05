@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -45,44 +46,53 @@ def separate_vocals(audio: Path, device: str, work: Path) -> Path:
         except subprocess.CalledProcessError:
             if d == "cpu":
                 raise
-    (tmp / "htdemucs" / audio.stem / "vocals.wav").replace(cache)
+    track_dir = tmp / "htdemucs" / audio.stem
+    (track_dir / "vocals.wav").replace(cache)
+    shutil.rmtree(track_dir, ignore_errors=True)
     return cache
 
 
 def generate_elrc(audio: Path, lines: list[tuple[float | None, str]],
                   device: str, work: Path, lang: str = "en",
-                  separate: bool = True) -> str | None:
+                  separate: bool = True, keep_stems: bool = False) -> str | None:
     """Align lyric `lines` to `audio` and return an enhanced-LRC string."""
     import whisperx
 
     src = separate_vocals(audio, device, work) if separate else audio
-    align_device = device if device in ("cuda", "cpu") else "mps"
-    audio_arr = whisperx.load_audio(str(src))
-    model, meta = whisperx.load_align_model(language_code=lang, device=align_device)
+    try:
+        align_device = device if device in ("cuda", "cpu") else "mps"
+        audio_arr = whisperx.load_audio(str(src))
+        model, meta = whisperx.load_align_model(language_code=lang, device=align_device)
 
-    segs = []
-    for i, (t, text) in enumerate(lines):
-        start = t if t is not None else 0.0
-        nxt = lines[i + 1][0] if i + 1 < len(lines) else None
-        end = nxt if (nxt is not None and nxt > start) else start + 8.0
-        segs.append({"start": start, "end": end, "text": text})
+        segs = []
+        for i, (t, text) in enumerate(lines):
+            start = t if t is not None else 0.0
+            nxt = lines[i + 1][0] if i + 1 < len(lines) else None
+            end = nxt if (nxt is not None and nxt > start) else start + 8.0
+            segs.append({"start": start, "end": end, "text": text})
 
-    aligned = whisperx.align(segs, model, meta, audio_arr, align_device,
-                             return_char_alignments=False)
+        aligned = whisperx.align(segs, model, meta, audio_arr, align_device,
+                                 return_char_alignments=False)
 
-    out = ["[tool:lyricarr]"]
-    for seg in aligned.get("segments", []):
-        words = [w for w in seg.get("words", []) if w.get("word")]
-        if not words:
-            continue
-        starts = [w["start"] for w in words if w.get("start") is not None]
-        line_start = starts[0] if starts else seg.get("start", 0.0)
-        chunk = f"[{_fmt_tag(line_start)}]"
-        last = line_start
-        for w in words:
-            ts = w.get("start")
-            ts = last if ts is None else ts
-            last = ts
-            chunk += f"<{_fmt_tag(ts)}>{w['word']}"
-        out.append(chunk)
-    return "\n".join(out) + "\n" if len(out) > 1 else None
+        out = ["[tool:lyricarr]"]
+        for seg in aligned.get("segments", []):
+            words = [w for w in seg.get("words", []) if w.get("word")]
+            if not words:
+                continue
+            starts = [w["start"] for w in words if w.get("start") is not None]
+            line_start = starts[0] if starts else seg.get("start", 0.0)
+            chunk = f"[{_fmt_tag(line_start)}]"
+            last = line_start
+            for w in words:
+                ts = w.get("start")
+                ts = last if ts is None else ts
+                last = ts
+                chunk += f"<{_fmt_tag(ts)}>{w['word']}"
+            out.append(chunk)
+        return "\n".join(out) + "\n" if len(out) > 1 else None
+    finally:
+        if separate and not keep_stems and src != audio:
+            try:
+                src.unlink()
+            except OSError:
+                pass

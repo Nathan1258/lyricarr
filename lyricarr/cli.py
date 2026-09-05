@@ -34,6 +34,8 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="regenerate existing sidecars (env LYRICARR_OVERWRITE)")
     ap.add_argument("--no-separate", action="store_true", default=_env_bool("LYRICARR_NO_SEPARATE"),
                     help="skip Demucs vocal isolation (env LYRICARR_NO_SEPARATE)")
+    ap.add_argument("--keep-stems", action="store_true", default=_env_bool("LYRICARR_KEEP_STEMS"),
+                    help="keep isolated vocal stems instead of deleting them (env LYRICARR_KEEP_STEMS)")
     ap.add_argument("--limit", type=int, default=int(os.environ.get("LYRICARR_LIMIT", "0")),
                     help="process at most N tracks (env LYRICARR_LIMIT)")
     ap.add_argument("--interval", type=int, default=int(os.environ.get("LYRICARR_INTERVAL", "0")),
@@ -76,7 +78,7 @@ def _run_once(args, generate_elrc, device: str) -> None:
             continue
         try:
             elrc = generate_elrc(path, lines, device, args.work, args.lang,
-                                 separate=not args.no_separate)
+                                 separate=not args.no_separate, keep_stems=args.keep_stems)
             if not elrc:
                 print(f"[{i}/{len(todo)}] – align empty: {label}", flush=True)
                 failed += 1
