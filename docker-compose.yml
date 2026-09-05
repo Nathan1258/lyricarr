@@ -1,0 +1,42 @@
+# Lyricarr — drop this beside your media server's compose (or merge the service).
+# Point the /music mount at the SAME library your server reads. Lyricarr writes
+# .lrc sidecars in place; Jellyfin/Navidrome/Plex pick them up on their next scan.
+
+services:
+  lyricarr:
+    build: .                      # or: image: ghcr.io/zuno-music/lyricarr:latest
+    container_name: lyricarr
+    volumes:
+      - /path/to/your/music:/music   # <-- EDIT: your music library (read-write)
+      - lyricarr-cache:/cache        # model cache (persist across runs)
+    environment:
+      LYRICARR_DEVICE: cpu           # cpu | cuda (see the cuda profile below)
+      LYRICARR_LANG: en
+      LYRICARR_INTERVAL: "0"         # 0 = run once and exit; e.g. 86400 = daily
+      # LYRICARR_OVERWRITE: "true"   # regenerate existing sidecars
+      # LYRICARR_LIMIT: "20"         # cap tracks per run (handy for a first try)
+    restart: "no"                    # set "unless-stopped" if using LYRICARR_INTERVAL
+
+  # --- NVIDIA GPU variant (Linux hosts only) --------------------------------
+  # Uncomment to build the CUDA image and run on a GPU.
+  # lyricarr-gpu:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.cuda
+  #   container_name: lyricarr
+  #   volumes:
+  #     - /path/to/your/music:/music
+  #     - lyricarr-cache:/cache
+  #   environment:
+  #     LYRICARR_DEVICE: cuda
+  #     LYRICARR_INTERVAL: "0"
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+
+volumes:
+  lyricarr-cache:

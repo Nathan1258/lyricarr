@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lyricarr"
+version = "0.1.0"
+description = "Generate word-synced (enhanced .lrc) lyric sidecars for a self-hosted music library — Demucs + WhisperX + LRCLIB. Works with Jellyfin, Navidrome, and Plex."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Nathan Ellis" }]
+keywords = ["lyrics", "lrc", "karaoke", "jellyfin", "navidrome", "plex",
+            "self-hosted", "whisperx", "demucs", "forced-alignment"]
+
+dependencies = [
+    "mutagen>=1.47",
+    "demucs>=4.0",
+    "whisperx>=3.1",
+]
+
+[project.scripts]
+lyricarr = "lyricarr.cli:main"
+
+[project.urls]
+Homepage = "https://zunomusic.app"
+
+[tool.setuptools.packages.find]
+include = ["lyricarr*"]

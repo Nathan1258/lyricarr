@@ -1,0 +1,21 @@
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --no-cache-dir torch torchaudio
+
+WORKDIR /app
+COPY pyproject.toml README.md ./
+COPY lyricarr ./lyricarr
+RUN pip3 install --no-cache-dir .
+
+ENV TORCH_HOME=/cache/torch \
+    HF_HOME=/cache/hf \
+    LYRICARR_LIBRARY=/music \
+    LYRICARR_DEVICE=cuda \
+    LYRICARR_WORK=/tmp/lyricarr
+VOLUME ["/music", "/cache"]
+
+ENTRYPOINT ["lyricarr"]
