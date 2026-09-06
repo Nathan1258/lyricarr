@@ -83,6 +83,18 @@ Notes:
   apps may render line-level — but the full enhanced file is available to any
   client that reads the raw lyric stream.
 
+## Players
+
+The `.lrc` files Lyricarr writes work in any client that reads lyric sidecars.
+For the full Apple-Music-style karaoke effect on Apple devices, pair it with
+[**Zuno Music**](https://github.com/Nathan1258/Zuno-Music) — a music player for
+Plex, Jellyfin, and Navidrome on iPhone, iPad, Apple Watch, Apple TV, and Mac.
+
+Zuno Music renders Lyricarr's lyrics **word-by-word**, highlighting each word as
+it's sung (and showing background/harmony vocals beneath the main line) on
+Jellyfin and Plex. On Navidrome it follows along line-by-line, since Navidrome
+downgrades enhanced lyrics to line-level (see the table above).
+
 ## Notes & limits
 
 - Not every track is on LRCLIB (instrumentals/obscure releases are skipped).
