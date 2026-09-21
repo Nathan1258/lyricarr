@@ -87,8 +87,8 @@ def generate_elrc(audio: Path, lines: list[tuple[float | None, str]],
                 ts = w.get("start")
                 ts = last if ts is None else ts
                 last = ts
-                chunk += f"<{_fmt_tag(ts)}>{w['word']}"
-            out.append(chunk)
+                chunk += f"<{_fmt_tag(ts)}>{w['word'].strip()} "
+            out.append(chunk.rstrip())
         return "\n".join(out) + "\n" if len(out) > 1 else None
     finally:
         if separate and not keep_stems and src != audio:
