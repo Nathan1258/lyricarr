@@ -118,7 +118,7 @@ def generate_elrc(audio: Path, lines: list[tuple[float, str]],
 
     src = separate_vocals(audio, device, work) if separate else audio
     try:
-        align_device = device if device in ("cuda", "cpu") else "mps"
+        align_device = "cuda" if device == "cuda" else "cpu"
         audio_arr = whisperx.load_audio(str(src))
         duration = len(audio_arr) / SAMPLE_RATE
         model, align_meta = _align_model(lang, align_device)

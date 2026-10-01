@@ -36,6 +36,9 @@ def _build_parser() -> argparse.ArgumentParser:
                          "(env LYRICARR_FALLBACK_LANG)")
     ap.add_argument("--overwrite", action="store_true", default=_env_bool("LYRICARR_OVERWRITE"),
                     help="regenerate existing sidecars (env LYRICARR_OVERWRITE)")
+    ap.add_argument("--upgrade", action="store_true", default=_env_bool("LYRICARR_UPGRADE"),
+                    help="regenerate sidecars not written by this version of Lyricarr, "
+                         "skipping ones that already are (env LYRICARR_UPGRADE)")
     ap.add_argument("--no-separate", action="store_true", default=_env_bool("LYRICARR_NO_SEPARATE"),
                     help="skip Demucs vocal isolation (env LYRICARR_NO_SEPARATE)")
     ap.add_argument("--keep-stems", action="store_true", default=_env_bool("LYRICARR_KEEP_STEMS"),
@@ -52,9 +55,23 @@ def _build_parser() -> argparse.ArgumentParser:
     return ap
 
 
+def _is_current(sidecar: Path) -> bool:
+    try:
+        head = sidecar.read_text(encoding="utf-8", errors="ignore")[:512]
+    except OSError:
+        return False
+    return "[tool:lyricarr]" in head and "[length:" in head
+
+
+def _needs_sidecar(sidecar: Path, args) -> bool:
+    if args.overwrite or not sidecar.exists():
+        return True
+    return args.upgrade and not _is_current(sidecar)
+
+
 def _run_once(args, generate_elrc, device: str) -> None:
     files = scan_library(args.library)
-    todo = [f for f in files if args.overwrite or not f.with_suffix(".lrc").exists()]
+    todo = [f for f in files if _needs_sidecar(f.with_suffix(".lrc"), args)]
     have = len(files) - len(todo)
     print(f"Found {len(files)} audio files; {have} already have sidecars; "
           f"{len(todo)} to process" + (f" (limit {args.limit})" if args.limit else ""),

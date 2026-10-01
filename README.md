@@ -56,6 +56,7 @@ Every flag has a `LYRICARR_*` env var (used by the Docker image):
 | `--lang` | `LYRICARR_LANG` | `auto` | alignment language, or `auto` to detect it per track from the lyrics |
 | `--fallback-lang` | `LYRICARR_FALLBACK_LANG` | `en` | used when detection fails or the language has no alignment model |
 | `--overwrite` | `LYRICARR_OVERWRITE` | off | regenerate existing sidecars |
+| `--upgrade` | `LYRICARR_UPGRADE` | off | regenerate sidecars made by older Lyricarr versions or other tools; safe to stop and resume |
 | `--no-separate` | `LYRICARR_NO_SEPARATE` | off | skip Demucs (faster, less accurate) |
 | `--limit N` | `LYRICARR_LIMIT` | 0 | cap tracks per run |
 | `--interval S` | `LYRICARR_INTERVAL` | 0 | seconds between scans; 0 = once |
