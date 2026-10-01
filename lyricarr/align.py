@@ -5,6 +5,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+from .tags import TrackMeta
+
+_MODELS: dict[tuple[str, str], tuple] = {}
+_BRACKETS = str.maketrans("[]", "()")
+
 
 def pick_device(requested: str = "auto") -> str:
     if requested != "auto":
@@ -52,44 +57,86 @@ def separate_vocals(audio: Path, device: str, work: Path) -> Path:
     return cache
 
 
-def generate_elrc(audio: Path, lines: list[tuple[float | None, str]],
+def _align_words(text: str, start: float, end: float, model, meta,
+                 audio_arr, device: str) -> list[dict]:
+    import whisperx
+
+    aligned = whisperx.align([{"start": start, "end": end, "text": text}],
+                             model, meta, audio_arr, device,
+                             return_char_alignments=False)
+    return [w for seg in aligned.get("segments", [])
+            for w in seg.get("words", []) if w.get("word", "").strip()]
+
+
+def _align_model(lang: str, device: str) -> tuple:
+    import whisperx
+
+    key = (lang, device)
+    if key not in _MODELS:
+        if len(_MODELS) >= 2:
+            _MODELS.pop(next(iter(_MODELS)))
+        _MODELS[key] = whisperx.load_align_model(language_code=lang, device=device)
+    return _MODELS[key]
+
+
+def _header(meta: TrackMeta | None, duration: float) -> list[str]:
+    fields = [("ar", meta.artist), ("al", meta.album), ("ti", meta.title)] if meta else []
+    out = [f"[{k}:{' '.join(v.translate(_BRACKETS).split())}]"
+           for k, v in fields if v and v.strip()]
+    m, sec = divmod(int(round(duration)), 60)
+    out += [f"[length:{m:02d}:{sec:02d}]", "[tool:lyricarr]"]
+    return out
+
+
+def _render_line(t: float, text: str, words: list[dict],
+                 floor: float, spaced: bool) -> tuple[str, float]:
+    starts = [w["start"] for w in words if w.get("start") is not None]
+    if not starts:
+        t = max(t, floor)
+        return f"[{_fmt_tag(t)}]{text}", t
+    last = max(starts[0], floor)
+    chunk = f"[{_fmt_tag(last)}]"
+    for w in words:
+        ts = w.get("start")
+        last = last if ts is None else max(ts, last)
+        chunk += f"<{_fmt_tag(last)}>{w['word'].strip()}" + (" " if spaced else "")
+    chunk = chunk.rstrip()
+    end = words[-1].get("end")
+    if end is not None and end > last:
+        chunk += f"<{_fmt_tag(end)}>"
+    return chunk, last
+
+
+def generate_elrc(audio: Path, lines: list[tuple[float, str]],
                   device: str, work: Path, lang: str = "en",
-                  separate: bool = True, keep_stems: bool = False) -> str | None:
+                  separate: bool = True, keep_stems: bool = False,
+                  meta: TrackMeta | None = None) -> str | None:
     """Align lyric `lines` to `audio` and return an enhanced-LRC string."""
     import whisperx
+    from whisperx.alignment import LANGUAGES_WITHOUT_SPACES
+    from whisperx.audio import SAMPLE_RATE
 
     src = separate_vocals(audio, device, work) if separate else audio
     try:
         align_device = device if device in ("cuda", "cpu") else "mps"
         audio_arr = whisperx.load_audio(str(src))
-        model, meta = whisperx.load_align_model(language_code=lang, device=align_device)
+        duration = len(audio_arr) / SAMPLE_RATE
+        model, align_meta = _align_model(lang, align_device)
+        spaced = lang not in LANGUAGES_WITHOUT_SPACES
 
-        segs = []
+        out = _header(meta, duration)
+        floor = 0.0
         for i, (t, text) in enumerate(lines):
-            start = t if t is not None else 0.0
-            nxt = lines[i + 1][0] if i + 1 < len(lines) else None
-            end = nxt if (nxt is not None and nxt > start) else start + 8.0
-            segs.append({"start": start, "end": end, "text": text})
-
-        aligned = whisperx.align(segs, model, meta, audio_arr, align_device,
-                                 return_char_alignments=False)
-
-        out = ["[tool:lyricarr]"]
-        for seg in aligned.get("segments", []):
-            words = [w for w in seg.get("words", []) if w.get("word")]
-            if not words:
+            if not text:
+                floor = max(t, floor)
+                out.append(f"[{_fmt_tag(floor)}]")
                 continue
-            starts = [w["start"] for w in words if w.get("start") is not None]
-            line_start = starts[0] if starts else seg.get("start", 0.0)
-            chunk = f"[{_fmt_tag(line_start)}]"
-            last = line_start
-            for w in words:
-                ts = w.get("start")
-                ts = last if ts is None else ts
-                last = ts
-                chunk += f"<{_fmt_tag(ts)}>{w['word'].strip()} "
-            out.append(chunk.rstrip())
-        return "\n".join(out) + "\n" if len(out) > 1 else None
+            end = next((n for n, _ in lines[i + 1:] if n > t), duration)
+            words = (_align_words(text, t, end, model, align_meta, audio_arr, align_device)
+                     if end > t else [])
+            line, floor = _render_line(t, text, words, floor, spaced)
+            out.append(line)
+        return "\n".join(out) + "\n" if any(text for _, text in lines) else None
     finally:
         if separate and not keep_stems and src != audio:
             try:

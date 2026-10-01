@@ -27,18 +27,16 @@ def _clean(s: str) -> str:
     return re.sub(r"\s+", " ", _EXPLICIT.sub(" ", s)).strip()
 
 
-def _parse_synced(text: str) -> list[tuple[float | None, str]]:
-    out: list[tuple[float | None, str]] = []
+def _parse_synced(text: str) -> list[tuple[float, str]]:
+    out: list[tuple[float, str]] = []
     for line in text.splitlines():
         m = _LINE.match(line)
         if not m:
             continue
         mins, secs, frac = int(m.group(1)), int(m.group(2)), m.group(3)
         t = mins * 60 + secs + (int(frac) / 10 ** len(frac) if frac else 0.0)
-        body = line[m.end():].strip()
-        if body:
-            out.append((t, body))
-    return out
+        out.append((t, line[m.end():].strip()))
+    return out if any(body for _, body in out) else []
 
 
 def fetch_lines(artist: str, title: str, album: str, duration: float
@@ -54,8 +52,8 @@ def fetch_lines(artist: str, title: str, album: str, duration: float
         try:
             q = urllib.parse.urlencode({"q": f"{artist} {title}".strip()})
             results = _get(f"{BASE}/search?{q}")
-            payload = next((r for r in results
-                            if r.get("syncedLyrics") or r.get("plainLyrics")), None)
+            payload = (next((r for r in results if r.get("syncedLyrics")), None)
+                       or next((r for r in results if r.get("plainLyrics")), None))
         except Exception:
             payload = None
     if not payload:

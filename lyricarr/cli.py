@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 
 from . import lrclib
+from .language import alignable, detect_language
 from .tags import read_meta, scan_library
 
 
@@ -28,8 +29,11 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="path to the music library root (env LYRICARR_LIBRARY)")
     ap.add_argument("--device", default=os.environ.get("LYRICARR_DEVICE", "auto"),
                     help="auto|cuda|mps|cpu (env LYRICARR_DEVICE)")
-    ap.add_argument("--lang", default=os.environ.get("LYRICARR_LANG", "en"),
-                    help="alignment language code (env LYRICARR_LANG)")
+    ap.add_argument("--lang", default=os.environ.get("LYRICARR_LANG", "auto"),
+                    help="alignment language code, or auto to detect per track (env LYRICARR_LANG)")
+    ap.add_argument("--fallback-lang", default=os.environ.get("LYRICARR_FALLBACK_LANG", "en"),
+                    help="language used when auto-detection fails or is unsupported "
+                         "(env LYRICARR_FALLBACK_LANG)")
     ap.add_argument("--overwrite", action="store_true", default=_env_bool("LYRICARR_OVERWRITE"),
                     help="regenerate existing sidecars (env LYRICARR_OVERWRITE)")
     ap.add_argument("--no-separate", action="store_true", default=_env_bool("LYRICARR_NO_SEPARATE"),
@@ -72,19 +76,29 @@ def _run_once(args, generate_elrc, device: str) -> None:
             nolyrics += 1
             continue
         kind, lines = found
+        if kind != "synced":
+            print(f"[{i}/{len(todo)}] – unsynced lyrics only: {label}", flush=True)
+            nolyrics += 1
+            continue
+        lang = args.lang
+        if lang == "auto":
+            lang = detect_language(lines) or args.fallback_lang
         if args.dry_run:
-            print(f"[{i}/{len(todo)}] ✓ {kind:6} {label} ({len(lines)} lines)", flush=True)
+            print(f"[{i}/{len(todo)}] ✓ [{lang}] {label} ({len(lines)} lines)", flush=True)
             done += 1
             continue
+        if not alignable(lang):
+            lang = args.fallback_lang
         try:
-            elrc = generate_elrc(path, lines, device, args.work, args.lang,
-                                 separate=not args.no_separate, keep_stems=args.keep_stems)
+            elrc = generate_elrc(path, lines, device, args.work, lang,
+                                 separate=not args.no_separate, keep_stems=args.keep_stems,
+                                 meta=meta)
             if not elrc:
                 print(f"[{i}/{len(todo)}] – align empty: {label}", flush=True)
                 failed += 1
                 continue
             meta.sidecar.write_text(elrc, encoding="utf-8")
-            print(f"[{i}/{len(todo)}] ✓ {label}", flush=True)
+            print(f"[{i}/{len(todo)}] ✓ [{lang}] {label}", flush=True)
             done += 1
         except Exception as e:
             print(f"[{i}/{len(todo)}] ✗ {label}: {e}", flush=True)

@@ -53,7 +53,8 @@ Every flag has a `LYRICARR_*` env var (used by the Docker image):
 |------|-----|---------|---------|
 | `library` | `LYRICARR_LIBRARY` | `/music` (Docker) | music library root |
 | `--device` | `LYRICARR_DEVICE` | `auto` | `auto`/`cuda`/`mps`/`cpu` |
-| `--lang` | `LYRICARR_LANG` | `en` | alignment language |
+| `--lang` | `LYRICARR_LANG` | `auto` | alignment language, or `auto` to detect it per track from the lyrics |
+| `--fallback-lang` | `LYRICARR_FALLBACK_LANG` | `en` | used when detection fails or the language has no alignment model |
 | `--overwrite` | `LYRICARR_OVERWRITE` | off | regenerate existing sidecars |
 | `--no-separate` | `LYRICARR_NO_SEPARATE` | off | skip Demucs (faster, less accurate) |
 | `--limit N` | `LYRICARR_LIMIT` | 0 | cap tracks per run |
@@ -98,8 +99,11 @@ downgrades enhanced lyrics to line-level (see the table above).
 ## Notes & limits
 
 - Not every track is on LRCLIB (instrumentals/obscure releases are skipped).
-- Accuracy dips on dense harmonies, heavy overlap, and non-English without the
-  right language model.
+- Accuracy dips on dense harmonies and heavy overlap.
+- Mixed-language libraries work out of the box: each track's language is
+  detected from its lyrics and aligned with a matching model. Tracks in a
+  language without an alignment model use `--fallback-lang`.
+- Tracks that only have unsynced lyrics on LRCLIB are skipped.
 - Background/duet labelling isn't detected yet (roadmap).
 
 ## License

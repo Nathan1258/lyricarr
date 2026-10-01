@@ -11,7 +11,7 @@ services:
       - lyricarr-cache:/cache        # model cache (persist across runs)
     environment:
       LYRICARR_DEVICE: cpu           # cpu | cuda (see the cuda profile below)
-      LYRICARR_LANG: en
+      LYRICARR_LANG: auto
       LYRICARR_INTERVAL: "0"         # 0 = run once and exit; e.g. 86400 = daily
       # LYRICARR_OVERWRITE: "true"   # regenerate existing sidecars
       # LYRICARR_LIMIT: "20"         # cap tracks per run (handy for a first try)
