@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lyricarr"
-version = "0.1.0"
+version = "0.2.0"
 description = "Generate word-synced (enhanced .lrc) lyric sidecars for a self-hosted music library — Demucs + WhisperX + LRCLIB. Works with Jellyfin, Navidrome, and Plex."
 readme = "README.md"
 license = { text = "MIT" }
@@ -24,7 +24,7 @@ dependencies = [
 lyricarr = "lyricarr.cli:main"
 
 [project.urls]
-Homepage = "https://zunomusic.app"
+Homepage = "https://github.com/Nathan1258/lyricarr"
 
 [tool.setuptools.packages.find]
 include = ["lyricarr*"]

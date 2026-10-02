@@ -4,7 +4,7 @@
 
 services:
   lyricarr:
-    build: .                      # or: image: ghcr.io/zuno-music/lyricarr:latest
+    image: ghcr.io/nathan1258/lyricarr:latest   # or: build: .
     container_name: lyricarr
     volumes:
       - /path/to/your/music:/music   # <-- EDIT: your music library (read-write)
@@ -20,9 +20,7 @@ services:
   # --- NVIDIA GPU variant (Linux hosts only) --------------------------------
   # Uncomment to build the CUDA image and run on a GPU.
   # lyricarr-gpu:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.cuda
+  #   image: ghcr.io/nathan1258/lyricarr:cuda
   #   container_name: lyricarr
   #   volumes:
   #     - /path/to/your/music:/music

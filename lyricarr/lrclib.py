@@ -7,7 +7,7 @@ import urllib.parse
 import urllib.request
 
 BASE = "https://lrclib.net/api"
-UA = "Lyricarr/0.1 (+https://github.com/zuno-music/lyricarr)"
+UA = "Lyricarr/0.2 (+https://github.com/Nathan1258/lyricarr)"
 
 _LINE = re.compile(r"^\[(\d+):(\d{2})(?:[.:](\d{1,3}))?\]")
 

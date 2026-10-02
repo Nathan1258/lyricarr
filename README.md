@@ -32,10 +32,10 @@ docker compose run --rm lyricarr            # one pass over the library
 ```
 
 - CPU by default (works anywhere).
-- **NVIDIA GPU**: use the `Dockerfile.cuda` variant and `--gpus all` — Demucs
-  goes from minutes to seconds per track.
+- **NVIDIA GPU**: use the `ghcr.io/nathan1258/lyricarr:cuda` image and `--gpus all`
+  — Demucs goes from minutes to seconds per track.
 - Set `LYRICARR_INTERVAL=86400` and `restart: unless-stopped` to keep it topping
-  up new music daily..
+  up new music daily.
 
 ## Quick start (native — Mac/Linux, uses GPU)
 
@@ -75,12 +75,12 @@ lyricarr /path/to/music --limit 5     # generate a handful, then check your serv
 |--------|:--:|:--:|
 | Jellyfin | ✅ | ✅ parses into structured word cues |
 | Plex | ✅ (after a library scan) | ✅ serves the raw `.lrc` unchanged — a client parses the word timing |
-| Navidrome | ✅ | ❌ line-level only — it flattens to `{start, value}` per line (no per-word field) |
+| Navidrome | ✅ | ✅ from v0.64, via OpenSubsonic `getLyricsBySongId?enhanced=true` (older versions are line-level) |
 
 Notes:
-- The sidecar file Lyricarr writes is always full word-level. Jellyfin and Plex
-  preserve it (Jellyfin as parsed cues, Plex as the untouched file); Navidrome
-  is the only one that downgrades to line-level, via its API.
+- The sidecar file Lyricarr writes is always full word-level. Jellyfin exposes
+  it as parsed word cues, Plex serves the untouched file, and Navidrome v0.64+
+  returns word cues to clients that ask for enhanced lyrics.
 - Plex needs a **library file scan** to detect newly-added sidecars, and its own
   apps may render line-level — but the full enhanced file is available to any
   client that reads the raw lyric stream.
@@ -89,13 +89,13 @@ Notes:
 
 The `.lrc` files Lyricarr writes work in any client that reads lyric sidecars.
 For the full Apple-Music-style karaoke effect on Apple devices, pair it with
-[**Zuno Music**](https://github.com/Nathan1258/Zuno-Music) — a music player for
-Plex, Jellyfin, and Navidrome on iPhone, iPad, Apple Watch, Apple TV, and Mac.
+[**Zuno Music**](https://testflight.apple.com/join/uHbR9qJr) (free beta on
+TestFlight), a music player for Plex, Jellyfin, and Navidrome on iPhone, iPad,
+Apple Watch, Apple TV, and Mac.
 
 Zuno Music renders Lyricarr's lyrics **word-by-word**, highlighting each word as
-it's sung (and showing background/harmony vocals beneath the main line) on
-Jellyfin and Plex. On Navidrome it follows along line-by-line, since Navidrome
-downgrades enhanced lyrics to line-level (see the table above).
+it's sung and showing background/harmony vocals beneath the main line, on
+Jellyfin, Plex, and Navidrome v0.64+.
 
 ## Notes & limits
 
